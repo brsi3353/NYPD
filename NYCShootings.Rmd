@@ -1,0 +1,60 @@
+---
+title: "NYPD Shooting Data"
+author: "Bradley Sides"
+date: 04/25/2024
+output: html_document
+---
+```{r}
+library(readr)
+library(dplyr)
+library(tidyr)
+library(lubridate)
+library(ggplot2)
+url <- "https://data.cityofnewyork.us/api/views/833y-fsy8/rows.csv?accessType=DOWNLOAD"
+
+file <- "NYPD_Shooting_Incident_Data_Historic.csv"
+download.file(url, destfile = file, method = "curl")
+
+dat = read_csv(file)
+glimpse(dat)
+summary(dat)
+
+dat <- select(dat, -c("LOC_OF_OCCUR_DESC", "JURISDICTION_CODE", "LOC_CLASSFCTN_DESC", "PERP_SEX", "PERP_RACE", "VIC_RACE", "VIC_SEX", "X_COORD_CD", "Y_COORD_CD", "Latitude", "Longitude", "Lon_Lat", "STATISTICAL_MURDER_FLAG", "INCIDENT_KEY"))
+
+
+
+missing <- sum(is.na(dat))
+missing
+
+dat <-dat %>% drop_na()
+
+glimpse(dat)
+summary(dat)
+
+# Boro Analysis
+boro_counts <- dat %>%
+  count(BORO, name = "Shootings") %>%
+  arrange(desc(Shootings))
+
+ggplot(boro_counts, aes(x = reorder(BORO, -Shootings), y = Shootings)) + geom_bar(stat = "identity", fill = "steelblue") + labs(x = "Borough", y = "# of Shootings", title="Shooting Frequency by Borough") + theme_minimal() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+# Victim age vs Perp age
+
+age_group_counts <- dat %>%
+  count(PERP_AGE_GROUP, VIC_AGE_GROUP)
+
+ggplot(age_group_counts, aes(x = PERP_AGE_GROUP, y = VIC_AGE_GROUP)) + 
+  geom_count(aes(size = n), color = "orange") + 
+  labs(x = "Perp Age", y = "Victim Age", title = "Perpetrator vs. Victim Age") + 
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+
+### Analysis: Murder rates taper off pretty heavily based on frequency alone, however when you standardize by population of each borough to get a standard shooting rate, they start to level out a little more. While Brooklyn has the most total shootings, the Bronx has considerably more by population, and Staten Island, while apparently low, would actually be closer to Manhattan. Queens, in the end, would be the safest Borough shooting-wise
+
+### Analysis: Perpetrators tend to be around the same age as their victims, with the biggest concentration of shootins being inside the 18-24 and 25-44 age range, which does make sense. The 18-24 age range is much smaller though, meaning that a 6-year range of ages commits nearly the same amount of shootings as a 20-year age range, which is significant. Perp and victim ages both taper off in all directions.
+
+### Conclusion and Bias Statement: With this data, we are able to look into shooting frequency across the New York City boroughs as well as the ages of both perpetrators and victims. We are looking at raw numbers, so bias should be minimized, however some important factors to consider when reading this data are that the shootings by Borough are total numbers, not adjusted for population, which could be misleading. On top of this, there are many factors that contribute to violence in areas that can be overlooked when only looking at numbers.
